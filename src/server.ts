@@ -12,9 +12,17 @@ dotenv.config()
 
 const app = express()
 
-app.use(cors({
-  origin: "http://localhost:3000"
-}))
+const allowedOrigins = ['http://localhost:3000', 'https://appointa.vercel.app'];
+
+const corsOptions = {
+  origin: allowedOrigins
+};
+
+
+app.use(cors(corsOptions));
+// app.use(cors({
+//   origin: "http://localhost:3000"
+// }))
 app.use(express.json())
 
 // app.use('/auth', authRoutes)
