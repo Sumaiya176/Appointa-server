@@ -6,6 +6,8 @@ interface IResponse<T> {
   data: T | null;
 }
 
+
+
 export const sendResponse = <T>(res: Response, responseData: IResponse<T>) => {
   const { data, message, isSuccess } = responseData;
   res.status(200).json({
