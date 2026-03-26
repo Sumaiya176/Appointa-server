@@ -1,0 +1,89 @@
+# This is the name that appears in GitHub Actions tab
+name: Test and Deploy to Render
+
+# This section defines WHEN the workflow should run
+on:
+  # Trigger when code is pushed to main or master branch
+  push:
+    branches: [ main, master ]
+  
+  # Allows you to manually trigger the workflow from GitHub UI
+  # Useful for testing or emergency deployments
+  workflow_dispatch:
+
+# This defines the actual work that will be done
+# Jobs run in parallel by default, but we can make one depend on another
+jobs:
+  # First job: TESTING
+  # We name this job "test" (you can name it anything)
+  test:
+    # The type of virtual machine to run on
+    # ubuntu-latest is the latest Ubuntu Linux environment
+    runs-on: ubuntu-latest
+    
+    # Each job contains multiple steps that run sequentially
+    steps:
+      # Step 1: Checkout your code
+      # This downloads your repository code into the GitHub runner
+      - name: Checkout code
+        # uses: tells GitHub to use a pre-built action
+        # actions/checkout@v4 is the official action to clone your repo
+        uses: actions/checkout@v4
+      
+      # Step 2: Set up Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Use Node.js version 20 (matches your local environment)
+          node-version: '20'
+          # Cache npm dependencies to speed up future runs
+          # This stores node_modules in GitHub's cache system
+          cache: 'npm'
+      
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        # run: executes a shell command
+        # npm ci is like npm install but faster and uses exact versions from package-lock.json
+        # It's better for CI/CD because it ensures reproducible builds
+        run: npm ci
+      
+      # Step 4: Type check without generating files
+      - name: Run TypeScript type check
+        # npx runs a local package
+        # tsc --noEmit checks TypeScript types but doesn't output .js files
+        # This catches type errors before deployment
+        run: npx tsc --noEmit
+      
+      # Step 5: Run your tests
+      - name: Run tests
+        run: npm test
+        # env: sets environment variables for this step only
+        env:
+          # Using GitHub secret for database URL (must be set in GitHub Secrets)
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: test
+      
+      # Step 6: Build TypeScript to JavaScript
+      - name: Build
+        run: npm run build
+        # This creates the dist/ folder with compiled code
+  
+  # Second job: DEPLOYMENT
+  # This job depends on test job completing successfully
+  deploy:
+    # This job will only run if the 'test' job succeeds
+    needs: test
+    
+    # Run on the same Ubuntu environment
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Trigger Render deployment
+      - name: Trigger Render Deployment
+        run: |
+          # The pipe (|) allows multiple lines of commands
+          # curl is a command-line tool to make HTTP requests
+          # -X POST specifies it's a POST request
+          # ${{ secrets.RENDER_DEPLOY_HOOK }} is the secret we stored in GitHub
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+          

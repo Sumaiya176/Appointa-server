@@ -46,7 +46,7 @@ app.use('/user', userRoute)
 //app.use('/appointments', appointmentRoutes)
 
 app.get('/', (req, res) => {
-  res.send('Smart Queue API running')
+  res.send('Appointa server API running')
 })
 
 
